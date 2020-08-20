@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "1055059525710",
+    "firebase_url": "https://rtsummstracker.firebaseio.com",
+    "project_id": "rtsummstracker",
+    "storage_bucket": "rtsummstracker.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1055059525710:android:61f0af3f190fbe9c38831f",
+        "android_client_info": {
+          "package_name": "com.JJPC.LOLSummsTracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1055059525710-fq2mjkhian0sjct12fqbp04sumo3i0pr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBm46ohE7b7HsEUdP0aSpGDBFnpetr8FqY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1055059525710-fq2mjkhian0sjct12fqbp04sumo3i0pr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

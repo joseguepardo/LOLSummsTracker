@@ -10,7 +10,7 @@ using SRF.Components;
 
 namespace SummsTracker
 {
-    public class DataManager : SRSingleton<DataManager>
+    public partial class DataManager : SRSingleton<DataManager>
     {
         [Serializable]
         public class PlayerData
@@ -40,6 +40,9 @@ namespace SummsTracker
             databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
             //Debug.Log(FirebaseDatabase.DefaultInstance.RootReference.);
             //StartCoroutine(InitializePlayerDataCO());
+
+            // Initialize Riot data.
+            InitializeRiotData();
         }
 
         public void OnDestroy()
@@ -145,7 +148,7 @@ namespace SummsTracker
         //    return JsonUtility.FromJson<PlayerSkins>(PlayerPrefs.GetString(playerSkinsKey));
         //}
 
-        [Button]
+        [Button, BoxGroup("Firebase")]
         public void CreateMatchTable(string matchId, string nameA, string nameB)
         {
             StartCoroutine(CreateMatchTableCO(matchId, nameA, nameB));

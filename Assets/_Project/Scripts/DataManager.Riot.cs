@@ -53,17 +53,28 @@ namespace SummsTracker
         [BoxGroup("Riot/SummonerData")]
         public string summonerId;
 
-        public class SummonerMatchData
+        [Serializable]
+        public class Summoner
         {
-            public string summonerId;
-            public string summonerName;
+            public class SummonerSpell
+            {
+                public string id;
+                public string name;
+                public Sprite sprite;
+                public float cooldown;
+                public float currentCooldown;
+                public string summonerTracker;
+            }
+
+            public string id;
+            public string name;
             public string teamId;
             public string championId;
-            public string summ1Id;
-            public string summ2Id;
-            public bool hasSummCDR;
+            public Sprite icon;
+            public SummonerSpell summonerSpell1;
+            public SummonerSpell summonerSpell2;
+            public bool hasSummonerCDRRune;
         }
-
 
         // Methods.
         public void InitializeRiotData()

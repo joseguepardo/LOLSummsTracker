@@ -58,42 +58,59 @@ namespace SummsTracker
         [Serializable]
         public class Summoner
         {
+            [Serializable]
             public class SummonerSpell
             {
                 public string id;
                 public string name;
-                public Sprite sprite;
+                [PreviewField]
+                public Sprite icon;
                 public float cooldown;
                 public float currentCooldown;
                 public string summonerTracker;
 
-                public SummonerSpell(string id, string name, Sprite sprite, float cooldown, string summonerTracker)
+                public SummonerSpell(string id, string name, Sprite icon, float cooldown, string summonerTracker)
                 {
                     this.id = id;
                     this.name = name;
-                    this.sprite = sprite;
+                    this.icon = icon;
                     this.cooldown = cooldown;
                     this.currentCooldown = cooldown;
                     this.summonerTracker = summonerTracker;
                 }
             }
 
+            [Serializable]
+            public class Champion
+            {
+                public string id;
+                public string name;
+                [PreviewField]
+                public Sprite icon;
+
+                public Champion(string id, string name, Sprite icon)
+                {
+                    this.id = id;
+                    this.name = name;
+                    this.icon = icon;
+                }
+            }
+
             public string id;
             public string name;
             public string teamId;
-            public string championId;
-            public Sprite icon;
+            public Champion champion;
             public SummonerSpell summonerSpell1;
             public SummonerSpell summonerSpell2;
             public bool hasSummonerCDRRune;
 
-            public Summoner(string id, string name, string teamId, string championId, Sprite icon, SummonerSpell summonerSpell1, SummonerSpell summonerSpell2, bool hasSummonerCDRRune)
+
+            public Summoner(string id, string name, string teamId, Champion champion, SummonerSpell summonerSpell1, SummonerSpell summonerSpell2, bool hasSummonerCDRRune)
             {
                 this.id = id;
                 this.name = name;
                 this.teamId = teamId;
-                this.championId = championId;
-                this.icon = icon;
+                this.champion = champion;
                 this.summonerSpell1 = summonerSpell1;
                 this.summonerSpell2 = summonerSpell2;
                 this.hasSummonerCDRRune = hasSummonerCDRRune;
@@ -237,10 +254,13 @@ namespace SummsTracker
                     }
                     for (int i = 0; i < json["participants"].Count; i++)
                     {
-                        Debug.LogFormat("json: {0}, variable: {1}", json["participants"][i]["teamId"], enemyTeamId);
-
                         if (json["participants"][i]["teamId"].AsInt == enemyTeamId)
                         {
+                            Summoner.Champion champion = new Summoner.Champion(
+                                json["participants"][i]["championId"],
+                                champions[json["participants"][i]["championId"]].name,
+                                null);
+
                             Summoner.SummonerSpell summonerSpell1 = new Summoner.SummonerSpell(
                                 json["participants"][i]["spell1Id"],
                                 summonerSpells[json["participants"][i]["spell1Id"]].name,
@@ -262,8 +282,7 @@ namespace SummsTracker
                                 json["participants"][i]["summonerId"],
                                 json["participants"][i]["summonerName"],
                                 json["participants"][i]["teamId"],
-                                json["participants"][i]["championId"],
-                                null,
+                                champion,
                                 summonerSpell1,
                                 summonerSpell2,
                                 perksIds.Contains("8347")
@@ -271,7 +290,7 @@ namespace SummsTracker
 
                             if (summoners == null) summoners = new List<Summoner>();
                             summoners.Add(enemy);
-                            Debug.Log("hola :v");
+                            StartCoroutine(GetChampionIconCO(summoners[summoners.Count - 1]));
                         }
                     }
 
@@ -281,6 +300,20 @@ namespace SummsTracker
                     Debug.LogErrorFormat("Error - code: {0}", request.responseCode);
                 }
             }
+        }
+
+        IEnumerator GetChampionIconCO(Summoner summoner)
+        {
+            // Download the summoner spell icon first.
+            UnityWebRequest championIconRequest = UnityWebRequestTexture.GetTexture(championIconsURL + summoner.champion.name + ".png");
+            yield return championIconRequest.SendWebRequest();
+            if (championIconRequest.isNetworkError)
+            {
+                Debug.LogErrorFormat("Error downloading summoner spell icon: {0}", championIconRequest.error);
+                yield break;
+            }
+            Texture2D texture = DownloadHandlerTexture.GetContent(championIconRequest);
+            summoner.champion.icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
         }
 
         UnityWebRequest AddWebRequestHeaders(UnityWebRequest request)

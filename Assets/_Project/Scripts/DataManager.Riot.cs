@@ -14,7 +14,7 @@ namespace SummsTracker
     public partial class DataManager : SRSingleton<DataManager>
     {
         // Core.
-        string riotKey = "RGAPI-eb48e9a9-28fc-4f79-887c-9065f7ffc400";
+        string riotKey = "RGAPI-25fcb51b-2589-4061-9216-ea0d2cd531ec";
         string routing = "https://la1.api.riotgames.com";
 
         // Request services.
@@ -48,9 +48,9 @@ namespace SummsTracker
         }
 
         // User data.
-        [BoxGroup("Riot/SummonerData")]
+        [BoxGroup("Riot/SummonerData"),ReadOnly]
         public bool summonerLoaded;
-        [BoxGroup("Riot/SummonerData")]
+        [BoxGroup("Riot/SummonerData"),ReadOnly]
         public string summonerId;
 
         [Serializable]
@@ -75,6 +75,8 @@ namespace SummsTracker
             public SummonerSpell summonerSpell2;
             public bool hasSummonerCDRRune;
         }
+        [ReadOnly]
+        public List<Summoner> summoners;
 
         // Methods.
         public void InitializeRiotData()
@@ -200,6 +202,21 @@ namespace SummsTracker
                 {
                     var json = JSON.Parse(request.downloadHandler.text);
                     Debug.LogFormat("game id: {0}", json["gameId"]);
+                    string enemyTeamId; 
+                    for (int i = 0; i < json["participants"].Count; i++)
+                    {
+                       if (json["participants"][i]["summonerId"] == summonerId){
+                           enemyTeamId = json["participants"][i]["teamId"] == "100" ? "200" : "100";
+                           break;
+                       }
+                    }
+                    for (int i = 0; i < json["participants"].Count; i++)
+                    {
+                        if(json["participants"][i]["teamId"] == enemyTeamId){
+                            
+                        }
+                    }
+                    
                 }
                 else
                 {

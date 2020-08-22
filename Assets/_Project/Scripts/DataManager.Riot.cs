@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,6 +6,7 @@ using UnityEngine.Networking;
 using Sirenix.OdinInspector;
 using SRF.Components;
 using SimpleJSON;
+using System.Security.Cryptography.X509Certificates;
 
 // runa 8347
 namespace SummsTracker
@@ -14,7 +14,7 @@ namespace SummsTracker
     public partial class DataManager : SRSingleton<DataManager>
     {
         // Core.
-        string riotKey = "RGAPI-25fcb51b-2589-4061-9216-ea0d2cd531ec";
+        string riotKey = "RGAPI-98b8d0f4-2e46-4f0d-ae8e-d0695b3e84db";
         string routing = "https://la1.api.riotgames.com";
 
         // Request services.
@@ -36,21 +36,23 @@ namespace SummsTracker
         {
             public string id;
             public string name;
+            public float cooldown;
             [PreviewField]
             public Sprite sprite;
 
-            public GameItem(string id, string name, Sprite sprite)
+            public GameItem(string id, string name, float cooldown, Sprite sprite)
             {
                 this.id = id;
                 this.name = name;
+                this.cooldown = cooldown;
                 this.sprite = sprite;
             }
         }
 
         // User data.
-        [BoxGroup("Riot/SummonerData"),ReadOnly]
+        [BoxGroup("Riot/SummonerData"), ReadOnly]
         public bool summonerLoaded;
-        [BoxGroup("Riot/SummonerData"),ReadOnly]
+        [BoxGroup("Riot/SummonerData"), ReadOnly]
         public string summonerId;
 
         [Serializable]
@@ -64,6 +66,16 @@ namespace SummsTracker
                 public float cooldown;
                 public float currentCooldown;
                 public string summonerTracker;
+
+                public SummonerSpell(string id, string name, Sprite sprite, float cooldown, string summonerTracker)
+                {
+                    this.id = id;
+                    this.name = name;
+                    this.sprite = sprite;
+                    this.cooldown = cooldown;
+                    this.currentCooldown = cooldown;
+                    this.summonerTracker = summonerTracker;
+                }
             }
 
             public string id;
@@ -74,6 +86,18 @@ namespace SummsTracker
             public SummonerSpell summonerSpell1;
             public SummonerSpell summonerSpell2;
             public bool hasSummonerCDRRune;
+
+            public Summoner(string id, string name, string teamId, string championId, Sprite icon, SummonerSpell summonerSpell1, SummonerSpell summonerSpell2, bool hasSummonerCDRRune)
+            {
+                this.id = id;
+                this.name = name;
+                this.teamId = teamId;
+                this.championId = championId;
+                this.icon = icon;
+                this.summonerSpell1 = summonerSpell1;
+                this.summonerSpell2 = summonerSpell2;
+                this.hasSummonerCDRRune = hasSummonerCDRRune;
+            }
         }
         [ReadOnly]
         public List<Summoner> summoners;
@@ -106,7 +130,7 @@ namespace SummsTracker
                 for (int i = 0; i < json.Count; i++)
                 {
                     // Don't download the champion's icon yet, only the ones that are going to be used.
-                    champions.Add(json[i]["key"], new GameItem(json[i]["id"], json[i]["name"], null));
+                    champions.Add(json[i]["key"], new GameItem(json[i]["id"], json[i]["name"], 0, null));
                 }
             }
         }
@@ -140,7 +164,7 @@ namespace SummsTracker
                         yield break;
                     }
                     Texture2D texture = DownloadHandlerTexture.GetContent(summonerIconRequest);
-                    summonerSpells.Add(json[i]["key"], new GameItem(json[i]["id"], json[i]["name"], Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero)));
+                    summonerSpells.Add(json[i]["key"], new GameItem(json[i]["id"], json[i]["name"], json[i]["cooldownBurn"].AsFloat, Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero)));
                 }
 
             }
@@ -202,21 +226,55 @@ namespace SummsTracker
                 {
                     var json = JSON.Parse(request.downloadHandler.text);
                     Debug.LogFormat("game id: {0}", json["gameId"]);
-                    string enemyTeamId; 
+                    int enemyTeamId = 0;
                     for (int i = 0; i < json["participants"].Count; i++)
                     {
-                       if (json["participants"][i]["summonerId"] == summonerId){
-                           enemyTeamId = json["participants"][i]["teamId"] == "100" ? "200" : "100";
-                           break;
-                       }
-                    }
-                    for (int i = 0; i < json["participants"].Count; i++)
-                    {
-                        if(json["participants"][i]["teamId"] == enemyTeamId){
-                            
+                        if (json["participants"][i]["summonerId"] == summonerId)
+                        {
+                            enemyTeamId = json["participants"][i]["teamId"] == 100 ? 200 : 100;
+                            break;
                         }
                     }
-                    
+                    for (int i = 0; i < json["participants"].Count; i++)
+                    {
+                        Debug.LogFormat("json: {0}, variable: {1}", json["participants"][i]["teamId"], enemyTeamId);
+
+                        if (json["participants"][i]["teamId"].AsInt == enemyTeamId)
+                        {
+                            Summoner.SummonerSpell summonerSpell1 = new Summoner.SummonerSpell(
+                                json["participants"][i]["spell1Id"],
+                                summonerSpells[json["participants"][i]["spell1Id"]].name,
+                                summonerSpells[json["participants"][i]["spell1Id"]].sprite,
+                                summonerSpells[json["participants"][i]["spell1Id"]].cooldown,
+                                "");
+                            Summoner.SummonerSpell summonerSpell2 = new Summoner.SummonerSpell(
+                                json["participants"][i]["spell2Id"],
+                                summonerSpells[json["participants"][i]["spell2Id"]].name,
+                                summonerSpells[json["participants"][i]["spell2Id"]].sprite,
+                                summonerSpells[json["participants"][i]["spell2Id"]].cooldown,
+                                "");
+                            List<string> perksIds = new List<string>();
+                            for (int j = 0; j < json["participants"][i]["perks"]["perkIds"].Count; j++)
+                            {
+                                perksIds.Add(json["participants"][i]["perks"]["perkIds"][j]);
+                            }
+                            Summoner enemy = new Summoner(
+                                json["participants"][i]["summonerId"],
+                                json["participants"][i]["summonerName"],
+                                json["participants"][i]["teamId"],
+                                json["participants"][i]["championId"],
+                                null,
+                                summonerSpell1,
+                                summonerSpell2,
+                                perksIds.Contains("8347")
+                                );
+
+                            if (summoners == null) summoners = new List<Summoner>();
+                            summoners.Add(enemy);
+                            Debug.Log("hola :v");
+                        }
+                    }
+
                 }
                 else
                 {

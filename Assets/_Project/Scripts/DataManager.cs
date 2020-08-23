@@ -32,8 +32,7 @@ namespace SummsTracker
 
         public void OnDestroy()
         {
-            //if (FireBaseManager.HasInstance())
-            //FireBaseManager.Instance.OnSignedIn -= InitializePlayerData;
+            FireBaseManager.Instance.OnSignedIn -= InitializePlayerData;
         }
 
         public void InitializePlayerData()

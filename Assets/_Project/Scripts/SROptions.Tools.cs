@@ -9,6 +9,6 @@ public partial class SROptions
     [Category("My Category")]
     public void CreateMatchA()
     {
-        DataManager.Instance.CreateMatchTable("testA", "Jose", "Pala");
+        //DataManager.Instance.CreateMatchTable("testA", "Jose", "Pala");
     }
 }

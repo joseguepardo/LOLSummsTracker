@@ -12,21 +12,6 @@ namespace SummsTracker
 {
     public partial class DataManager : SRSingleton<DataManager>
     {
-        [Serializable]
-        public class PlayerData
-        {
-            public string nameA;
-            public string nameB;
-
-            public PlayerData(string nameA, string nameB)
-            {
-                this.nameA = nameA;
-                this.nameB = nameB;
-            }
-        }
-
-        public PlayerData playerData;
-
         public DatabaseReference databaseReference;
 
         public Action OnDataLoaded;
@@ -147,27 +132,35 @@ namespace SummsTracker
         //    return JsonUtility.FromJson<PlayerSkins>(PlayerPrefs.GetString(playerSkinsKey));
         //}
 
-        [Button, BoxGroup("Firebase")]
-        public void CreateMatchTable(string matchId, string nameA, string nameB)
+        public void CreateMatchTable()
         {
-            StartCoroutine(CreateMatchTableCO(matchId, nameA, nameB));
+            StartCoroutine(CreateMatchTableCO());
         }
 
-        IEnumerator CreateMatchTableCO(string matchId, string nameA, string nameB)
+        IEnumerator CreateMatchTableCO()
         {
-            playerData = new PlayerData(nameA, nameB);
-            // Firebase.
-            var createMatchTableTask = CreateMatchTableTask(matchId);
-            Debug.LogFormat("Creating table in FireBase with json {0}", JsonUtility.ToJson(playerData));
-            yield return new WaitUntil(() => createMatchTableTask.IsCompleted);
-
-            FirebaseDatabase.DefaultInstance.GetReference(matchId).ValueChanged += OnMatchUpdated;
+            var matchExists = MatchTableExists();
+            yield return new WaitUntil(() => matchExists.IsCompleted);
+            if (!matchExists.Result)
+            {
+                // Firebase.
+                var createMatchTableTask = CreateMatchTableTask();
+                Debug.Log("Creating table in FireBase");
+                yield return new WaitUntil(() => createMatchTableTask.IsCompleted);
+            }
+            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).ValueChanged += OnMatchUpdated;
         }
 
-        async Task<bool> CreateMatchTableTask(string matchId)
+        async Task<bool> CreateMatchTableTask()
         {
-            await databaseReference.Child(matchId).SetRawJsonValueAsync(JsonUtility.ToJson(playerData));
+            await databaseReference.Child(match.matchId).SetRawJsonValueAsync(JsonUtility.ToJson(match));
             return true;
+        }
+
+        async Task<bool> MatchTableExists()
+        {
+            var dataSnapshot = await databaseReference.Child(match.matchId).GetValueAsync();
+            return dataSnapshot.Exists;
         }
 
         void OnMatchUpdated(object sender, ValueChangedEventArgs args)

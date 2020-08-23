@@ -150,6 +150,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d34de6f455011742ba756277416f00b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  riotKey: 'RGAPI-642c4503-af29-4a98-a497-c989a3203a91 '
+  summonerLoaded: 0
+  summonerId: 
+  match:
+    summoners: []
+  loggedIn: 0
 --- !u!4 &576896074
 Transform:
   m_ObjectHideFlags: 0

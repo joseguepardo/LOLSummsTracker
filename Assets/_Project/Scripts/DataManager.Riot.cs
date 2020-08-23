@@ -85,13 +85,15 @@ namespace SummsTracker
             {
                 public string id;
                 public string name;
+                public string nameId;
                 [PreviewField]
                 public Sprite icon;
 
-                public Champion(string id, string name, Sprite icon)
+                public Champion(string id, string name, string nameId, Sprite icon)
                 {
                     this.id = id;
                     this.name = name;
+                    this.nameId = nameId;
                     this.icon = icon;
                 }
             }
@@ -224,6 +226,8 @@ namespace SummsTracker
         // Get summoner's current match info.
         public void GetLiveMatchInfo()
         {
+            if (summoners == null) summoners = new List<Summoner>();
+            summoners.Clear();
             StartCoroutine(GetLiveMatchInfoCO());
         }
 
@@ -259,6 +263,7 @@ namespace SummsTracker
                             Summoner.Champion champion = new Summoner.Champion(
                                 json["participants"][i]["championId"],
                                 champions[json["participants"][i]["championId"]].name,
+                                champions[json["participants"][i]["championId"]].id,
                                 null);
 
                             Summoner.SummonerSpell summonerSpell1 = new Summoner.SummonerSpell(
@@ -288,7 +293,6 @@ namespace SummsTracker
                                 perksIds.Contains("8347")
                                 );
 
-                            if (summoners == null) summoners = new List<Summoner>();
                             summoners.Add(enemy);
                             StartCoroutine(GetChampionIconCO(summoners[summoners.Count - 1]));
                         }
@@ -305,7 +309,7 @@ namespace SummsTracker
         IEnumerator GetChampionIconCO(Summoner summoner)
         {
             // Download the summoner spell icon first.
-            UnityWebRequest championIconRequest = UnityWebRequestTexture.GetTexture(championIconsURL + summoner.champion.name + ".png");
+            UnityWebRequest championIconRequest = UnityWebRequestTexture.GetTexture(championIconsURL + summoner.champion.nameId + ".png");
             yield return championIconRequest.SendWebRequest();
             if (championIconRequest.isNetworkError)
             {

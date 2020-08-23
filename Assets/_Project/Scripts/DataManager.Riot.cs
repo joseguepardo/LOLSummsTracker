@@ -14,7 +14,7 @@ namespace SummsTracker
     public partial class DataManager : SRSingleton<DataManager>
     {
         // Core.
-        string riotKey = "RGAPI-98b8d0f4-2e46-4f0d-ae8e-d0695b3e84db";
+        public string riotKey = "RGAPI-98b8d0f4-2e46-4f0d-ae8e-d0695b3e84db";
         string routing = "https://la1.api.riotgames.com";
 
         // Request services.
@@ -63,7 +63,7 @@ namespace SummsTracker
             {
                 public string id;
                 public string name;
-                [PreviewField]
+                [PreviewField, NonSerialized]
                 public Sprite icon;
                 public float cooldown;
                 public float currentCooldown;
@@ -86,7 +86,7 @@ namespace SummsTracker
                 public string id;
                 public string name;
                 public string nameId;
-                [PreviewField]
+                [PreviewField, NonSerialized]
                 public Sprite icon;
 
                 public Champion(string id, string name, string nameId, Sprite icon)
@@ -118,8 +118,22 @@ namespace SummsTracker
                 this.hasSummonerCDRRune = hasSummonerCDRRune;
             }
         }
-        [ReadOnly]
-        public List<Summoner> summoners;
+
+        [Serializable]
+        public class Match
+        {
+            [NonSerialized]
+            public string matchId;
+            [ReadOnly]
+            public List<Summoner> summoners;
+
+            public Match()
+            {
+                summoners = new List<Summoner>();
+            }
+        }
+        [BoxGroup("Riot")]
+        public Match match;
 
         // Methods.
         public void InitializeRiotData()
@@ -226,8 +240,7 @@ namespace SummsTracker
         // Get summoner's current match info.
         public void GetLiveMatchInfo()
         {
-            if (summoners == null) summoners = new List<Summoner>();
-            summoners.Clear();
+            match = new Match();
             StartCoroutine(GetLiveMatchInfoCO());
         }
 
@@ -253,6 +266,7 @@ namespace SummsTracker
                         if (json["participants"][i]["summonerId"] == summonerId)
                         {
                             enemyTeamId = json["participants"][i]["teamId"] == 100 ? 200 : 100;
+                            match.matchId = json["gameId"] + enemyTeamId.ToString();
                             break;
                         }
                     }
@@ -293,11 +307,11 @@ namespace SummsTracker
                                 perksIds.Contains("8347")
                                 );
 
-                            summoners.Add(enemy);
-                            StartCoroutine(GetChampionIconCO(summoners[summoners.Count - 1]));
+                            match.summoners.Add(enemy);
+                            StartCoroutine(GetChampionIconCO(match.summoners[match.summoners.Count - 1]));
                         }
                     }
-
+                    CreateMatchTable();
                 }
                 else
                 {

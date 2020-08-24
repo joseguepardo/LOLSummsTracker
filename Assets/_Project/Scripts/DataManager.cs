@@ -7,6 +7,7 @@ using Firebase;
 using Firebase.Database;
 using Sirenix.OdinInspector;
 using SRF.Components;
+using UnityEditor.UIElements;
 
 namespace SummsTracker
 {
@@ -35,102 +36,11 @@ namespace SummsTracker
             FireBaseManager.Instance.OnSignedIn -= InitializePlayerData;
         }
 
+        #region setup
         public void InitializePlayerData()
         {
             loggedIn = true;
         }
-
-        //IEnumerator InitializePlayerDataCO()
-        //{
-        //    Debug.Log("#PlayerData# Starting data loading");
-        //    var loadPlayerDataTask = LoadPlayerData();
-        //    yield return new WaitUntil(() => loadPlayerDataTask.IsCompleted);
-
-        //    playerData = loadPlayerDataTask.Result;
-        //    PlayerData localPlayerData = LoadLocalPlayerData();
-
-        //    if (playerData == null)
-        //    {
-        //        if (localPlayerData == null)
-        //            playerData = new PlayerData();
-        //        else
-        //            playerData = localPlayerData;
-        //    }
-        //    else
-        //    {
-        //        if (localPlayerData != null)
-        //        {
-        //            playerData = playerData.maxLevelReachedId < localPlayerData.maxLevelReachedId ? localPlayerData : playerData;
-        //        }
-        //    }
-
-        //    Debug.Log("#PlayerData# \nCurrentLevelID: " + playerData.currentLevelId + "\nMaxLevelReachedID: " + playerData.maxLevelReachedId);
-
-        //    Debug.Log("#PlayerData# Starting skins loading");
-        //    var loadPlayerSkinsTask = LoadPlayerSkins();
-        //    yield return new WaitUntil(() => loadPlayerSkinsTask.IsCompleted);
-
-        //    playerSkins = loadPlayerSkinsTask.Result;
-        //    //PlayerSkins localPlayerSkins = LoadLocalPlayerSkins();
-        //    PlayerSkins localPlayerSkins = new PlayerSkins(new List<int>() { 0, 2 }, new List<int>() { 0, 1 });
-
-        //    if (playerSkins == null)
-        //    {
-        //        if (localPlayerSkins == null)
-        //            playerSkins = new PlayerSkins();
-        //        else
-        //            playerSkins = localPlayerSkins;
-        //    }
-        //    else
-        //    {
-        //        if (localPlayerSkins != null)
-        //        {
-        //            playerSkins = playerSkins.skinsOwned?.Count < localPlayerSkins.skinsOwned?.Count || playerSkins.trailsOwned?.Count < localPlayerSkins.trailsOwned?.Count ? localPlayerSkins : playerSkins;
-        //        }
-        //    }
-        //}
-
-        //async Task<PlayerData> LoadPlayerData()
-        //{
-        //Debug.Log("#PlayerData# Trying to retrieve player data");
-        ////if (SaveExists())
-        ////    return JsonUtility.FromJson<PlayerData>(PlayerPrefs.GetString(playerDataKey));
-
-        //var dataSnapshot = await databaseReference.Child(playerDataKey).Child(FireBaseManager.Instance.userId).GetValueAsync();
-        //if (!dataSnapshot.Exists)
-        //    return null;
-
-        //return JsonUtility.FromJson<PlayerData>(dataSnapshot.GetRawJsonValue());
-        //}
-
-        //PlayerData LoadLocalPlayerData()
-        //{
-        //if (!PlayerPrefs.HasKey(playerDataKey))
-        //    return null;
-
-        //return JsonUtility.FromJson<PlayerData>(PlayerPrefs.GetString(playerDataKey));
-        //}
-
-        //async Task<PlayerSkins> LoadPlayerSkins()
-        //{
-        //    Debug.Log("#PlayerData# Trying to retrieve player skins");
-        //    //if (SaveExists())
-        //    //    return JsonUtility.FromJson<PlayerSkins>(PlayerPrefs.GetString(playerDataKey));
-
-        //    var dataSnapshot = await databaseReference.Child(playerSkinsKey).Child(FireBaseManager.Instance.userId).GetValueAsync();
-        //    if (!dataSnapshot.Exists)
-        //        return null;
-
-        //    return JsonUtility.FromJson<PlayerSkins>(dataSnapshot.GetRawJsonValue());
-        //}
-
-        //PlayerSkins LoadLocalPlayerSkins()
-        //{
-        //    if (!PlayerPrefs.HasKey(playerSkinsKey))
-        //        return null;
-
-        //    return JsonUtility.FromJson<PlayerSkins>(PlayerPrefs.GetString(playerSkinsKey));
-        //}
 
         public void CreateMatchTable()
         {
@@ -172,5 +82,45 @@ namespace SummsTracker
             }
             Debug.Log(args.Snapshot.GetRawJsonValue());
         }
+        #endregion
+
+        public string TimeStamp()
+        {
+            return ServerValue.Timestamp.ToString();
+        }
+
+        [Button]
+        public void SummonerSpellUsed(int enemySummonerId, bool isSpell2 = false)
+        {
+            if (isSpell2)
+            {
+                match.summoners[enemySummonerId].summonerSpell2.SpellUpdated(summonerId, TimeStamp());
+            }
+            else
+            {
+                match.summoners[enemySummonerId].summonerSpell1.SpellUpdated(summonerId, TimeStamp());
+            }
+            StartCoroutine(UpdateSummonerSpellTableCO(enemySummonerId, isSpell2));
+        }
+
+        IEnumerator UpdateSummonerSpellTableCO(int enemySummonerId, bool isSpell2)
+        {
+            // Firebase.
+            var createMatchTableTask = UpdateSummonerSpellTableTask(enemySummonerId, isSpell2);
+            Debug.Log("Creating table in FireBase");
+            yield return new WaitUntil(() => createMatchTableTask.IsCompleted);
+        }
+
+        async Task<bool> UpdateSummonerSpellTableTask(int enemySummonerId, bool isSpell2)
+        {
+            await databaseReference.
+                Child(match.matchId).
+                Child("summoners").
+                Child(enemySummonerId.ToString()).
+                Child(isSpell2 ? "summonerSpell2" : "summonerSpell1").
+                SetRawJsonValueAsync(JsonUtility.ToJson(isSpell2 ? match.summoners[enemySummonerId].summonerSpell2 : match.summoners[enemySummonerId].summonerSpell1));
+            return true;
+        }
+
     }
 }

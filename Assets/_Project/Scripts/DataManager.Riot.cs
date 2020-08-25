@@ -54,6 +54,8 @@ namespace SummsTracker
         public bool summonerLoaded;
         [BoxGroup("Riot/SummonerData"), ReadOnly]
         public string summonerId;
+        [BoxGroup("Riot/SummonerData"), ReadOnly]
+        public bool matchLoaded;
 
         [Serializable]
         public class Summoner
@@ -68,9 +70,8 @@ namespace SummsTracker
                 public float cooldown;
                 public float currentCooldown;
                 public string summonerTracker;
-                public string timestamp;
 
-                public SummonerSpell(string id, string name, Sprite icon, float cooldown, string summonerTracker, string timestamp)
+                public SummonerSpell(string id, string name, Sprite icon, float cooldown, string summonerTracker)
                 {
                     this.id = id;
                     this.name = name;
@@ -78,13 +79,11 @@ namespace SummsTracker
                     this.cooldown = cooldown;
                     this.currentCooldown = cooldown;
                     this.summonerTracker = summonerTracker;
-                    this.timestamp = timestamp;
                 }
 
-                public void SpellUpdated(string summonerTracker, string timestamp)
+                public void SpellUpdated(string summonerTracker)
                 {
                     this.summonerTracker = summonerTracker;
-                    this.timestamp = timestamp;
                 }
             }
 
@@ -293,14 +292,12 @@ namespace SummsTracker
                                 summonerSpells[json["participants"][i]["spell1Id"]].name,
                                 summonerSpells[json["participants"][i]["spell1Id"]].sprite,
                                 summonerSpells[json["participants"][i]["spell1Id"]].cooldown,
-                                "",
                                 "");
                             Summoner.SummonerSpell summonerSpell2 = new Summoner.SummonerSpell(
                                 json["participants"][i]["spell2Id"],
                                 summonerSpells[json["participants"][i]["spell2Id"]].name,
                                 summonerSpells[json["participants"][i]["spell2Id"]].sprite,
                                 summonerSpells[json["participants"][i]["spell2Id"]].cooldown,
-                                "",
                                 "");
                             List<string> perksIds = new List<string>();
                             for (int j = 0; j < json["participants"][i]["perks"]["perkIds"].Count; j++)

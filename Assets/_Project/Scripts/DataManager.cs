@@ -8,6 +8,7 @@ using Firebase.Database;
 using Sirenix.OdinInspector;
 using SRF.Components;
 using UnityEditor.UIElements;
+using System.Security.Cryptography.X509Certificates;
 
 namespace SummsTracker
 {
@@ -18,10 +19,10 @@ namespace SummsTracker
         public Action OnDataLoaded;
         public bool loggedIn;
 
-        Dictionary<string, object> timestamp = new Dictionary<string, object>();
+        //Dictionary<string, object> timestamp = new Dictionary<string, object>();
         private IEnumerator Start()
         {
-            timestamp[".sv"] = "timestamp";
+            //timestamp[".sv"] = "timestamp";
             FireBaseManager.Instance.OnSignedIn += InitializePlayerData;
 
             yield return new WaitUntil(() => loggedIn);
@@ -72,23 +73,23 @@ namespace SummsTracker
 
             await databaseReference.Child(match.matchId).SetRawJsonValueAsync(JsonUtility.ToJson(match));
 
-            for (int i = 0; i < match.summoners.Count; i++)
-            {
-                await UpdateTimestamp(i, false);
-                await UpdateTimestamp(i, true);
-            }
+            //for (int i = 0; i < match.summoners.Count; i++)
+            //{
+            //    await UpdateTimestamp(i, false);
+            //    await UpdateTimestamp(i, true);
+            //}
         }
 
-        async Task UpdateTimestamp(int enemySummonerId, bool isSpell2)
-        {
-            await databaseReference.
-                Child(match.matchId).
-                Child("summoners").
-                Child(enemySummonerId.ToString()).
-                Child(isSpell2 ? "summonerSpell2" : "summonerSpell1").
-                Child("timestamp").
-                SetValueAsync(timestamp);
-        }
+        //async Task UpdateTimestamp(int enemySummonerId, bool isSpell2)
+        //{
+        //    await databaseReference.
+        //        Child(match.matchId).
+        //        Child("summoners").
+        //        Child(enemySummonerId.ToString()).
+        //        Child(isSpell2 ? "summonerSpell2" : "summonerSpell1").
+        //        Child("timestamp").
+        //        SetValueAsync(timestamp);
+        //}
 
         async Task<bool> MatchTableExists()
         {
@@ -104,25 +105,32 @@ namespace SummsTracker
                 return;
             }
             Debug.Log(args.Snapshot.GetRawJsonValue());
+            Match updatedMatch = JsonUtility.FromJson<Match>(args.Snapshot.GetRawJsonValue());
+            for (int i = 0; i < match.summoners.Count; i++)
+            {
+                if (match.summoners[i].summonerSpell1.summonerTracker != updatedMatch.summoners[i].summonerSpell1.summonerTracker)
+                {
+                    match.summoners[i].summonerSpell1.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[i].summonerSpell1.summonerTracker));
+                    match.summoners[i].summonerSpell1.summonerTracker = updatedMatch.summoners[i].summonerSpell1.summonerTracker;
+                }
+                if (match.summoners[i].summonerSpell2.summonerTracker != updatedMatch.summoners[i].summonerSpell2.summonerTracker)
+                {
+                    match.summoners[i].summonerSpell2.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[i].summonerSpell2.summonerTracker));
+                    match.summoners[i].summonerSpell2.summonerTracker = updatedMatch.summoners[i].summonerSpell2.summonerTracker;
+                }
+            }
         }
         #endregion
 
-        public string TimeStamp()
-        {
-            return ServerValue.Timestamp.ToString();
-        }
+        //public string TimeStamp()
+        //{
+        //    return ServerValue.Timestamp.ToString();
+        //}
 
         [Button, BoxGroup("Riot"), EnableIf("matchLoaded")]
-        public void SummonerSpellUsed(int enemySummonerId, bool isSpell2 = false)
+        public void SummonerSpellUsed(int enemySummonerId, bool isSpell2 = false, bool hasCDRBoots = false, int summonerLevel = 1)
         {
-            if (isSpell2)
-            {
-                match.summoners[enemySummonerId].summonerSpell2.SpellUpdated(summonerId);
-            }
-            else
-            {
-                match.summoners[enemySummonerId].summonerSpell1.SpellUpdated(summonerId);
-            }
+            match.summoners[enemySummonerId].SpellUpdated(isSpell2, summonerId, hasCDRBoots, summonerLevel);
             StartCoroutine(UpdateSummonerSpellTableCO(enemySummonerId, isSpell2));
         }
 
@@ -140,9 +148,8 @@ namespace SummsTracker
                 Child(match.matchId).
                 Child("summoners").
                 Child(enemySummonerId.ToString()).
-                Child(isSpell2 ? "summonerSpell2" : "summonerSpell1").
-                SetRawJsonValueAsync(JsonUtility.ToJson(isSpell2 ? match.summoners[enemySummonerId].summonerSpell2 : match.summoners[enemySummonerId].summonerSpell1));
-            await UpdateTimestamp(enemySummonerId, isSpell2);
+                SetRawJsonValueAsync(JsonUtility.ToJson(match.summoners[enemySummonerId]));
+            //await UpdateTimestamp(enemySummonerId, isSpell2);
             return true;
         }
 

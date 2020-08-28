@@ -150,7 +150,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d34de6f455011742ba756277416f00b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  riotKey: 'RGAPI-642c4503-af29-4a98-a497-c989a3203a91 '
+  riotKey: 'RGAPI-fb2cf168-ef1e-4772-9f1d-8f25d87b670f '
   summonerLoaded: 0
   summonerId: 
   match:

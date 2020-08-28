@@ -81,10 +81,7 @@ namespace SummsTracker
                     this.summonerTracker = summonerTracker;
                 }
 
-                public void SpellUpdated(string summonerTracker)
-                {
-                    this.summonerTracker = summonerTracker;
-                }
+                public Action<bool> OnToggle;
             }
 
             [Serializable]
@@ -112,7 +109,8 @@ namespace SummsTracker
             public SummonerSpell summonerSpell1;
             public SummonerSpell summonerSpell2;
             public bool hasSummonerCDRRune;
-
+            public bool hasCDRBoots;
+            public int summonerLevel;
 
             public Summoner(string id, string name, string teamId, Champion champion, SummonerSpell summonerSpell1, SummonerSpell summonerSpell2, bool hasSummonerCDRRune)
             {
@@ -123,6 +121,18 @@ namespace SummsTracker
                 this.summonerSpell1 = summonerSpell1;
                 this.summonerSpell2 = summonerSpell2;
                 this.hasSummonerCDRRune = hasSummonerCDRRune;
+                this.hasCDRBoots = false;
+                this.summonerLevel = 1;
+            }
+
+            public void SpellUpdated(bool isSpell2, string summonerTracker, bool hasCDRBoots, int summonerLevel)
+            {
+                //this.summonerTracker = summonerTracker;
+                // This means that the current summoner spell is teleport.
+                if (id == "12")
+                {
+
+                }
             }
         }
 
@@ -139,6 +149,7 @@ namespace SummsTracker
                 summoners = new List<Summoner>();
             }
         }
+
         [BoxGroup("Riot")]
         public Match match;
 

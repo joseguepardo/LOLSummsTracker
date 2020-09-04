@@ -62,7 +62,11 @@ namespace SummsTracker
                 Debug.Log("Creating table in FireBase");
                 yield return new WaitUntil(() => createMatchTableTask.IsCompleted);
             }
-            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).ValueChanged += OnMatchUpdated;
+            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("0").ValueChanged += OnSummonerUpdated_0;
+            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("1").ValueChanged += OnSummonerUpdated_1;
+            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("2").ValueChanged += OnSummonerUpdated_2;
+            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("3").ValueChanged += OnSummonerUpdated_3;
+            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("4").ValueChanged += OnSummonerUpdated_4;
             matchLoaded = true;
         }
 
@@ -72,24 +76,7 @@ namespace SummsTracker
             Debug.Log(offset.ToString());
 
             await databaseReference.Child(match.matchId).SetRawJsonValueAsync(JsonUtility.ToJson(match));
-
-            //for (int i = 0; i < match.summoners.Count; i++)
-            //{
-            //    await UpdateTimestamp(i, false);
-            //    await UpdateTimestamp(i, true);
-            //}
         }
-
-        //async Task UpdateTimestamp(int enemySummonerId, bool isSpell2)
-        //{
-        //    await databaseReference.
-        //        Child(match.matchId).
-        //        Child("summoners").
-        //        Child(enemySummonerId.ToString()).
-        //        Child(isSpell2 ? "summonerSpell2" : "summonerSpell1").
-        //        Child("timestamp").
-        //        SetValueAsync(timestamp);
-        //}
 
         async Task<bool> MatchTableExists()
         {
@@ -97,7 +84,7 @@ namespace SummsTracker
             return dataSnapshot.Exists;
         }
 
-        void OnMatchUpdated(object sender, ValueChangedEventArgs args)
+        void OnSummonerUpdated_0(object sender, ValueChangedEventArgs args)
         {
             if (args.DatabaseError != null)
             {
@@ -105,20 +92,71 @@ namespace SummsTracker
                 return;
             }
             Debug.Log(args.Snapshot.GetRawJsonValue());
-            Match updatedMatch = JsonUtility.FromJson<Match>(args.Snapshot.GetRawJsonValue());
-            for (int i = 0; i < match.summoners.Count; i++)
+            Summoner updatedSummoner = JsonUtility.FromJson<Summoner>(args.Snapshot.GetRawJsonValue());
+            OnSummonerUpdated(updatedSummoner, 0);
+        }
+
+        void OnSummonerUpdated_1(object sender, ValueChangedEventArgs args)
+        {
+            if (args.DatabaseError != null)
             {
-                if (match.summoners[i].summonerSpell1.summonerTracker != updatedMatch.summoners[i].summonerSpell1.summonerTracker)
-                {
-                    match.summoners[i].summonerSpell1.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[i].summonerSpell1.summonerTracker));
-                    match.summoners[i].summonerSpell1.summonerTracker = updatedMatch.summoners[i].summonerSpell1.summonerTracker;
-                }
-                if (match.summoners[i].summonerSpell2.summonerTracker != updatedMatch.summoners[i].summonerSpell2.summonerTracker)
-                {
-                    match.summoners[i].summonerSpell2.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[i].summonerSpell2.summonerTracker));
-                    match.summoners[i].summonerSpell2.summonerTracker = updatedMatch.summoners[i].summonerSpell2.summonerTracker;
-                }
+                Debug.LogError(args.DatabaseError.Message);
+                return;
             }
+            Debug.Log(args.Snapshot.GetRawJsonValue());
+            Summoner updatedSummoner = JsonUtility.FromJson<Summoner>(args.Snapshot.GetRawJsonValue());
+            OnSummonerUpdated(updatedSummoner, 1);
+        }
+
+        void OnSummonerUpdated_2(object sender, ValueChangedEventArgs args)
+        {
+            if (args.DatabaseError != null)
+            {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            Debug.Log(args.Snapshot.GetRawJsonValue());
+            Summoner updatedSummoner = JsonUtility.FromJson<Summoner>(args.Snapshot.GetRawJsonValue());
+            OnSummonerUpdated(updatedSummoner, 2);
+        }
+
+        void OnSummonerUpdated_3(object sender, ValueChangedEventArgs args)
+        {
+            if (args.DatabaseError != null)
+            {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            Debug.Log(args.Snapshot.GetRawJsonValue());
+            Summoner updatedSummoner = JsonUtility.FromJson<Summoner>(args.Snapshot.GetRawJsonValue());
+            OnSummonerUpdated(updatedSummoner, 3);
+        }
+
+        void OnSummonerUpdated_4(object sender, ValueChangedEventArgs args)
+        {
+            if (args.DatabaseError != null)
+            {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            Debug.Log(args.Snapshot.GetRawJsonValue());
+            Summoner updatedSummoner = JsonUtility.FromJson<Summoner>(args.Snapshot.GetRawJsonValue());
+            OnSummonerUpdated(updatedSummoner, 4);
+        }
+
+        void OnSummonerUpdated(Summoner updatedSummoner, int id)
+        {
+            if (match.summoners[id].summonerSpell1.summonerTracker != updatedSummoner.summonerSpell1.summonerTracker)
+            {
+                match.summoners[id].summonerSpell1.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[id].summonerSpell1.summonerTracker));
+                match.summoners[id].summonerSpell1.summonerTracker = updatedSummoner.summonerSpell1.summonerTracker;
+            }
+            if (match.summoners[id].summonerSpell2.summonerTracker != updatedSummoner.summonerSpell2.summonerTracker)
+            {
+                match.summoners[id].summonerSpell2.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[id].summonerSpell2.summonerTracker));
+                match.summoners[id].summonerSpell2.summonerTracker = updatedSummoner.summonerSpell2.summonerTracker;
+            }
+            Debug.Log(id);
         }
         #endregion
 

@@ -127,19 +127,25 @@ namespace SummsTracker
 
             public void SpellUpdated(bool isSpell2, string summonerTracker, bool hasCDRBoots, int summonerLevel)
             {
-                //this.summonerTracker = summonerTracker;
+                this.hasCDRBoots = hasCDRBoots;
+                this.summonerLevel = summonerLevel;
                 // This means that the current summoner spell is teleport.
-                if (id == "12")
+                SummonerSpell summonerSpell = isSpell2 ? summonerSpell2 : summonerSpell1;
+                if (summonerSpell.id == "12")
                 {
-
+                    summonerSpell.cooldown = 430.588f - (10.588f * summonerLevel);
                 }
+
+                float currentCDR = (hasCDRBoots ? 0.1f : 0f) + (hasSummonerCDRRune ? 0.05f : 0f);
+                summonerSpell.currentCooldown = summonerSpell.cooldown * (1 - currentCDR);
+                summonerSpell.summonerTracker = summonerTracker;
             }
         }
 
         [Serializable]
         public class Match
         {
-            [NonSerialized]
+            //[NonSerialized]
             public string matchId;
             [ReadOnly]
             public List<Summoner> summoners;

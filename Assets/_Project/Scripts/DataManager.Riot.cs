@@ -31,6 +31,12 @@ namespace SummsTracker
         [ShowInInspector, BoxGroup("Riot/GameData")]
         public Dictionary<int, GameItem> summonerSpells;
 
+        // Coroutine flags.
+        public bool getSummonerInfoCOCompleted;
+        public bool getSummonerInfoCOCompletedSuccessfully;
+        public bool getMatchLiveInfoCOCompleted;
+        public bool getMatchLiveInfoCOCompletedSuccessfully;
+
         [Serializable]
         public class GameItem
         {
@@ -69,16 +75,18 @@ namespace SummsTracker
                 public Sprite icon;
                 public float cooldown;
                 public float currentCooldown;
-                public string summonerTracker;
+                public bool available;
+                //public string summonerTracker;
 
-                public SummonerSpell(string id, string name, Sprite icon, float cooldown, string summonerTracker)
+                public SummonerSpell(string id, string name, Sprite icon, float cooldown, bool available)
                 {
                     this.id = id;
                     this.name = name;
                     this.icon = icon;
                     this.cooldown = cooldown;
                     this.currentCooldown = cooldown;
-                    this.summonerTracker = summonerTracker;
+                    this.available = available;
+                    //this.summonerTracker = summonerTracker;
                 }
 
                 public Action<bool> OnToggle;
@@ -138,26 +146,41 @@ namespace SummsTracker
 
                 float currentCDR = (hasCDRBoots ? 0.1f : 0f) + (hasSummonerCDRRune ? 0.05f : 0f);
                 summonerSpell.currentCooldown = summonerSpell.cooldown * (1 - currentCDR);
-                summonerSpell.summonerTracker = summonerTracker;
+                //summonerSpell.summonerTracker = summonerTracker;
             }
         }
 
         [Serializable]
-        public class Match
+        public class Room
         {
-            //[NonSerialized]
-            public string matchId;
-            [ReadOnly]
-            public List<Summoner> summoners;
-
-            public Match()
+            [Serializable]
+            public class Match
             {
-                summoners = new List<Summoner>();
+                //[NonSerialized]
+                public string matchId;
+                [ReadOnly]
+                public List<Summoner> summoners;
+
+                public Match()
+                {
+                    summoners = new List<Summoner>();
+                }
+            }
+
+            public string id;
+            public string password;
+            public Match match;
+
+            public Room(string id, string password)
+            {
+                this.id = id;
+                this.password = password;
+                match = new Match();
             }
         }
 
         [BoxGroup("Riot")]
-        public Match match;
+        public Room room;
 
         // Methods.
         public void InitializeRiotData()
@@ -227,12 +250,35 @@ namespace SummsTracker
             }
         }
 
-        // Get summoner info.
         [Button, BoxGroup("Riot")]
-        public void GetSummonerInfo(string summonerName)
+        public void CreateRoom(string id, string password, string summonerName)
         {
-            StartCoroutine(GetSummonerInfoCO(summonerName));
+            room = new Room(id, password);
+            StartCoroutine(CreateRoomCO(id, password, summonerName));
         }
+
+        IEnumerator CreateRoomCO(string id, string password, string summonerName)
+        {
+            getSummonerInfoCOCompleted = getSummonerInfoCOCompleted = false;
+            StartCoroutine(GetSummonerInfoCO(summonerName));
+            yield return new WaitUntil(() => getSummonerInfoCOCompleted);
+            if (getSummonerInfoCOCompletedSuccessfully)
+            {
+                StartCoroutine(GetLiveMatchInfoCO());
+                yield return new WaitUntil(() => getMatchLiveInfoCOCompleted);
+                if (getMatchLiveInfoCOCompletedSuccessfully)
+                {
+
+                }
+            }
+        }
+
+        // Get summoner info.
+        //[Button, BoxGroup("Riot")]
+        //public void GetSummonerInfo(string summonerName)
+        //{
+        //    StartCoroutine(GetSummonerInfoCO(summonerName));
+        //}
 
         IEnumerator GetSummonerInfoCO(string summonerName)
         {
@@ -242,6 +288,7 @@ namespace SummsTracker
             if (request.isNetworkError)
             {
                 Debug.LogErrorFormat("Error: {0}", request.error);
+                getSummonerInfoCOCompletedSuccessfully = false;
             }
             else
             {
@@ -252,30 +299,35 @@ namespace SummsTracker
                     var json = JSON.Parse(request.downloadHandler.text);
                     summonerId = json["id"].Value;
                     summonerLoaded = true;
+                    getSummonerInfoCOCompletedSuccessfully = true;
                 }
                 else
                 {
                     Debug.LogErrorFormat("Error - code: {0}", request.responseCode);
+                    getSummonerInfoCOCompletedSuccessfully = false;
                 }
             }
+            getSummonerInfoCOCompleted = true;
         }
 
         [Button, BoxGroup("Riot"), EnableIf("summonerLoaded")]
         // Get summoner's current match info.
         public void GetLiveMatchInfo()
         {
-            match = new Match();
+            //match = new Match();
             StartCoroutine(GetLiveMatchInfoCO());
         }
 
         IEnumerator GetLiveMatchInfoCO()
         {
+            yield return null;
             UnityWebRequest request = UnityWebRequest.Get(routing + liveMatchRequestServiceURL + summonerId);
             request = AddWebRequestHeaders(request);
             yield return request.SendWebRequest();
             if (request.isNetworkError)
             {
                 Debug.LogErrorFormat("Error: {0}", request.error);
+                getMatchLiveInfoCOCompletedSuccessfully = false;
             }
             else
             {
@@ -290,7 +342,7 @@ namespace SummsTracker
                         if (json["participants"][i]["summonerId"] == summonerId)
                         {
                             enemyTeamId = json["participants"][i]["teamId"] == 100 ? 200 : 100;
-                            match.matchId = json["gameId"] + enemyTeamId.ToString();
+                            room.match.matchId = json["gameId"] + enemyTeamId.ToString();
                             break;
                         }
                     }
@@ -309,13 +361,13 @@ namespace SummsTracker
                                 summonerSpells[json["participants"][i]["spell1Id"]].name,
                                 summonerSpells[json["participants"][i]["spell1Id"]].sprite,
                                 summonerSpells[json["participants"][i]["spell1Id"]].cooldown,
-                                "");
+                                true);
                             Summoner.SummonerSpell summonerSpell2 = new Summoner.SummonerSpell(
                                 json["participants"][i]["spell2Id"],
                                 summonerSpells[json["participants"][i]["spell2Id"]].name,
                                 summonerSpells[json["participants"][i]["spell2Id"]].sprite,
                                 summonerSpells[json["participants"][i]["spell2Id"]].cooldown,
-                                "");
+                                true);
                             List<string> perksIds = new List<string>();
                             for (int j = 0; j < json["participants"][i]["perks"]["perkIds"].Count; j++)
                             {
@@ -331,17 +383,20 @@ namespace SummsTracker
                                 perksIds.Contains("8347")
                                 );
 
-                            match.summoners.Add(enemy);
-                            StartCoroutine(GetChampionIconCO(match.summoners[match.summoners.Count - 1]));
+                            room.match.summoners.Add(enemy);
+                            StartCoroutine(GetChampionIconCO(room.match.summoners[room.match.summoners.Count - 1]));
                         }
                     }
                     CreateMatchTable();
+                    getMatchLiveInfoCOCompletedSuccessfully = true;
                 }
                 else
                 {
                     Debug.LogErrorFormat("Error - code: {0}", request.responseCode);
+                    getMatchLiveInfoCOCompletedSuccessfully = false;
                 }
             }
+            getMatchLiveInfoCOCompleted = true;
         }
 
         IEnumerator GetChampionIconCO(Summoner summoner)

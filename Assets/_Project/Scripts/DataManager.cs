@@ -146,15 +146,15 @@ namespace SummsTracker
 
         void OnSummonerUpdated(Summoner updatedSummoner, int id)
         {
-            if (match.summoners[id].summonerSpell1.summonerTracker != updatedSummoner.summonerSpell1.summonerTracker)
+            if (match.summoners[id].summonerSpell1.available != updatedSummoner.summonerSpell1.available)
             {
-                match.summoners[id].summonerSpell1.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[id].summonerSpell1.summonerTracker));
-                match.summoners[id].summonerSpell1.summonerTracker = updatedSummoner.summonerSpell1.summonerTracker;
+                match.summoners[id].summonerSpell1.OnToggle?.Invoke(match.summoners[id].summonerSpell1.available);
+                match.summoners[id].summonerSpell1.available = updatedSummoner.summonerSpell1.available;
             }
-            if (match.summoners[id].summonerSpell2.summonerTracker != updatedSummoner.summonerSpell2.summonerTracker)
+            if (match.summoners[id].summonerSpell2.available != updatedSummoner.summonerSpell2.available)
             {
-                match.summoners[id].summonerSpell2.OnToggle?.Invoke(string.IsNullOrEmpty(match.summoners[id].summonerSpell2.summonerTracker));
-                match.summoners[id].summonerSpell2.summonerTracker = updatedSummoner.summonerSpell2.summonerTracker;
+                match.summoners[id].summonerSpell2.OnToggle?.Invoke(match.summoners[id].summonerSpell2.available);
+                match.summoners[id].summonerSpell2.available = updatedSummoner.summonerSpell2.available;
             }
             Debug.Log(id);
         }

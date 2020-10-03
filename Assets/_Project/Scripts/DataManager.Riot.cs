@@ -190,6 +190,7 @@ namespace SummsTracker
             public string id;
             public string password;
             public Match match;
+            [InlineButton("DebuggingParticipants")]
             public List<Participant> participants;
 
             public Room(string id, string password)
@@ -198,6 +199,14 @@ namespace SummsTracker
                 this.password = password;
                 match = new Match();
                 participants = new List<Participant>();
+            }
+
+            void DebuggingParticipants()
+            {
+                for (int i = 0; i < participants.Count; i++)
+                {
+                    Debug.Log(participants[i].id);
+                }
             }
         }
 

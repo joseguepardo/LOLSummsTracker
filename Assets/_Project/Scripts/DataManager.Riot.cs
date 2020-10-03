@@ -7,6 +7,7 @@ using Sirenix.OdinInspector;
 using SRF.Components;
 using SimpleJSON;
 using System.Security.Cryptography.X509Certificates;
+using SRDebugger.Profiler;
 
 // runa 8347
 namespace SummsTracker
@@ -32,10 +33,18 @@ namespace SummsTracker
         public Dictionary<int, GameItem> summonerSpells;
 
         // Coroutine flags.
+        [HideInInspector]
         public bool getSummonerInfoCOCompleted;
+        [HideInInspector]
         public bool getSummonerInfoCOCompletedSuccessfully;
+        [HideInInspector]
         public bool getMatchLiveInfoCOCompleted;
+        [HideInInspector]
         public bool getMatchLiveInfoCOCompletedSuccessfully;
+        [HideInInspector]
+        public bool createRoomNodeCOCompleted;
+        [HideInInspector]
+        public bool createRoomNodeCOCompletedSuccessfully;
 
         [Serializable]
         public class GameItem
@@ -61,7 +70,7 @@ namespace SummsTracker
         [BoxGroup("Riot/SummonerData"), ReadOnly]
         public string summonerId;
         [BoxGroup("Riot/SummonerData"), ReadOnly]
-        public bool matchLoaded;
+        public bool roomLoaded;
 
         [Serializable]
         public class Summoner
@@ -253,13 +262,18 @@ namespace SummsTracker
         [Button, BoxGroup("Riot")]
         public void CreateRoom(string id, string password, string summonerName)
         {
+            if (String.IsNullOrEmpty(id) || String.IsNullOrEmpty(password))
+            {
+                Debug.LogError("#CreateRoomCO# id or password empty");
+                return;
+            }
             room = new Room(id, password);
             StartCoroutine(CreateRoomCO(id, password, summonerName));
         }
 
         IEnumerator CreateRoomCO(string id, string password, string summonerName)
         {
-            getSummonerInfoCOCompleted = getSummonerInfoCOCompleted = false;
+            getSummonerInfoCOCompleted = getSummonerInfoCOCompleted = createRoomNodeCOCompleted = false;
             StartCoroutine(GetSummonerInfoCO(summonerName));
             yield return new WaitUntil(() => getSummonerInfoCOCompleted);
             if (getSummonerInfoCOCompletedSuccessfully)
@@ -268,8 +282,64 @@ namespace SummsTracker
                 yield return new WaitUntil(() => getMatchLiveInfoCOCompleted);
                 if (getMatchLiveInfoCOCompletedSuccessfully)
                 {
-
+                    StartCoroutine(CreateRoomNodeCO());
+                    yield return new WaitUntil(() => createRoomNodeCOCompleted);
+                    if (createRoomNodeCOCompletedSuccessfully)
+                    {
+                        roomLoaded = true;
+                        Debug.Log("#CreateRoomCO# Room created successfully :)");
+                    }
+                    else
+                    {
+                        Debug.LogError("#CreateRoomCO# Room already exists");
+                    }
                 }
+                else
+                {
+                    Debug.LogError("#CreateRoomCO# Error getting match live info");
+                }
+            }
+            else
+            {
+                Debug.LogError("#CreateRoomCO# Error getting summoner info");
+            }
+        }
+
+        [Button, BoxGroup("Riot")]
+        public void JoinRoom(string id, string password)
+        {
+            StartCoroutine(JoinRoomCO(id, password));
+        }
+
+        IEnumerator JoinRoomCO(string id, string password)
+        {
+            room.id = id;
+            var roomExistsTask = RoomNodeExistsTask();
+            yield return new WaitUntil(() => roomExistsTask.IsCompleted);
+            if (roomExistsTask.Result)
+            {
+                var getRoomNodeTask = GetRoomNodeTask();
+                yield return new WaitUntil(() => getRoomNodeTask.IsCompleted);
+                if (getRoomNodeTask.IsFaulted)
+                {
+                    Debug.LogError("#JoinRoomCO# Could not load room info");
+                }
+                else
+                {
+                    if (password == getRoomNodeTask.Result.password)
+                    {
+                        room = getRoomNodeTask.Result;
+                        Debug.Log("#JoinRoomCO# Room info loaded successfully");
+                    }
+                    else
+                    {
+                        Debug.LogError("#JoinRoomCO# Wrong password :c");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError("#JoinRoomCO# does not exist");
             }
         }
 
@@ -387,7 +457,7 @@ namespace SummsTracker
                             StartCoroutine(GetChampionIconCO(room.match.summoners[room.match.summoners.Count - 1]));
                         }
                     }
-                    CreateMatchTable();
+                    //CreateMatchTable();
                     getMatchLiveInfoCOCompletedSuccessfully = true;
                 }
                 else

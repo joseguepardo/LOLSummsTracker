@@ -9,6 +9,7 @@ using Sirenix.OdinInspector;
 using SRF.Components;
 using UnityEditor.UIElements;
 using System.Security.Cryptography.X509Certificates;
+using TMPro;
 
 namespace SummsTracker
 {
@@ -37,7 +38,10 @@ namespace SummsTracker
 
         public void OnDestroy()
         {
-            FireBaseManager.Instance.OnSignedIn -= InitializePlayerData;
+            if (FireBaseManager.HasInstance)
+            {
+                FireBaseManager.Instance.OnSignedIn -= InitializePlayerData;
+            }
         }
 
         #region setup
@@ -45,43 +49,54 @@ namespace SummsTracker
         {
             loggedIn = true;
         }
+        //public void CreateRoomNode()
+        //{
+        //    StartCoroutine(CreateRoomNodeCO());
+        //}
 
-        public void CreateMatchTable()
+        IEnumerator CreateRoomNodeCO()
         {
-            StartCoroutine(CreateMatchTableCO());
-        }
-
-        IEnumerator CreateMatchTableCO()
-        {
-            var matchExists = MatchTableExists();
-            yield return new WaitUntil(() => matchExists.IsCompleted);
-            if (!matchExists.Result)
+            var roomExists = RoomNodeExistsTask();
+            yield return new WaitUntil(() => roomExists.IsCompleted);
+            if (!roomExists.Result)
             {
                 // Firebase.
-                var createMatchTableTask = CreateMatchTableTask();
-                Debug.Log("Creating table in FireBase");
-                yield return new WaitUntil(() => createMatchTableTask.IsCompleted);
+                var createRoomNodeTask = CreateRoomNodeTask();
+                Debug.Log("Creating node in FireBase");
+                yield return new WaitUntil(() => createRoomNodeTask.IsCompleted);
+                AddRoomListeners();
+                createRoomNodeCOCompletedSuccessfully = true;
             }
-            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("0").ValueChanged += OnSummonerUpdated_0;
-            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("1").ValueChanged += OnSummonerUpdated_1;
-            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("2").ValueChanged += OnSummonerUpdated_2;
-            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("3").ValueChanged += OnSummonerUpdated_3;
-            FirebaseDatabase.DefaultInstance.GetReference(match.matchId).Child("summoners").Child("4").ValueChanged += OnSummonerUpdated_4;
-            matchLoaded = true;
+            else
+            {
+                createRoomNodeCOCompletedSuccessfully = false;
+            }
+            createRoomNodeCOCompleted = true;
         }
 
-        async Task CreateMatchTableTask()
+        public void AddRoomListeners()
         {
-            var offset = await FirebaseDatabase.DefaultInstance.GetReference(".info/serverTimeOffset").GetValueAsync();
-            Debug.Log(offset.ToString());
-
-            await databaseReference.Child(match.matchId).SetRawJsonValueAsync(JsonUtility.ToJson(match));
+            FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("0").ValueChanged += OnSummonerUpdated_0;
+            FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("1").ValueChanged += OnSummonerUpdated_1;
+            FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("2").ValueChanged += OnSummonerUpdated_2;
+            FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("3").ValueChanged += OnSummonerUpdated_3;
+            FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("4").ValueChanged += OnSummonerUpdated_4;
         }
 
-        async Task<bool> MatchTableExists()
+        async Task CreateRoomNodeTask()
         {
-            var dataSnapshot = await databaseReference.Child(match.matchId).GetValueAsync();
+            await databaseReference.Child(room.id).SetRawJsonValueAsync(JsonUtility.ToJson(room));
+        }
+
+        async Task<bool> RoomNodeExistsTask()
+        {
+            var dataSnapshot = await databaseReference.Child(room.id).GetValueAsync();
             return dataSnapshot.Exists;
+        }
+        async Task<Room> GetRoomNodeTask()
+        {
+            var dataSnapshot = await databaseReference.Child(room.id).GetValueAsync();
+            return JsonUtility.FromJson<Room>(dataSnapshot.GetRawJsonValue());
         }
 
         void OnSummonerUpdated_0(object sender, ValueChangedEventArgs args)
@@ -146,15 +161,15 @@ namespace SummsTracker
 
         void OnSummonerUpdated(Summoner updatedSummoner, int id)
         {
-            if (match.summoners[id].summonerSpell1.available != updatedSummoner.summonerSpell1.available)
+            if (room.match.summoners[id].summonerSpell1.available != updatedSummoner.summonerSpell1.available)
             {
-                match.summoners[id].summonerSpell1.OnToggle?.Invoke(match.summoners[id].summonerSpell1.available);
-                match.summoners[id].summonerSpell1.available = updatedSummoner.summonerSpell1.available;
+                room.match.summoners[id].summonerSpell1.OnToggle?.Invoke(room.match.summoners[id].summonerSpell1.available);
+                room.match.summoners[id].summonerSpell1.available = updatedSummoner.summonerSpell1.available;
             }
-            if (match.summoners[id].summonerSpell2.available != updatedSummoner.summonerSpell2.available)
+            if (room.match.summoners[id].summonerSpell2.available != updatedSummoner.summonerSpell2.available)
             {
-                match.summoners[id].summonerSpell2.OnToggle?.Invoke(match.summoners[id].summonerSpell2.available);
-                match.summoners[id].summonerSpell2.available = updatedSummoner.summonerSpell2.available;
+                room.match.summoners[id].summonerSpell2.OnToggle?.Invoke(room.match.summoners[id].summonerSpell2.available);
+                room.match.summoners[id].summonerSpell2.available = updatedSummoner.summonerSpell2.available;
             }
             Debug.Log(id);
         }
@@ -165,28 +180,28 @@ namespace SummsTracker
         //    return ServerValue.Timestamp.ToString();
         //}
 
-        [Button, BoxGroup("Riot"), EnableIf("matchLoaded")]
+        [Button, BoxGroup("Riot"), EnableIf("roomLoaded")]
         public void SummonerSpellUsed(int enemySummonerId, bool isSpell2 = false, bool hasCDRBoots = false, int summonerLevel = 1)
         {
-            match.summoners[enemySummonerId].SpellUpdated(isSpell2, summonerId, hasCDRBoots, summonerLevel);
-            StartCoroutine(UpdateSummonerSpellTableCO(enemySummonerId, isSpell2));
+            room.match.summoners[enemySummonerId].SpellUpdated(isSpell2, summonerId, hasCDRBoots, summonerLevel);
+            StartCoroutine(UpdateSummonerSpellNodeCO(enemySummonerId, isSpell2));
         }
 
-        IEnumerator UpdateSummonerSpellTableCO(int enemySummonerId, bool isSpell2)
+        IEnumerator UpdateSummonerSpellNodeCO(int enemySummonerId, bool isSpell2)
         {
             // Firebase.
-            var updateSummonerSpellTableTask = UpdateSummonerSpellTableTask(enemySummonerId, isSpell2);
+            var updateSummonerSpellNodeTask = UpdateSummonerSpellNodeTask(enemySummonerId, isSpell2);
             Debug.Log("Creating table in FireBase");
-            yield return new WaitUntil(() => updateSummonerSpellTableTask.IsCompleted);
+            yield return new WaitUntil(() => updateSummonerSpellNodeTask.IsCompleted);
         }
 
-        async Task<bool> UpdateSummonerSpellTableTask(int enemySummonerId, bool isSpell2)
+        async Task<bool> UpdateSummonerSpellNodeTask(int enemySummonerId, bool isSpell2)
         {
             await databaseReference.
-                Child(match.matchId).
+                Child(room.match.matchId).
                 Child("summoners").
                 Child(enemySummonerId.ToString()).
-                SetRawJsonValueAsync(JsonUtility.ToJson(match.summoners[enemySummonerId]));
+                SetRawJsonValueAsync(JsonUtility.ToJson(room.match.summoners[enemySummonerId]));
             //await UpdateTimestamp(enemySummonerId, isSpell2);
             return true;
         }

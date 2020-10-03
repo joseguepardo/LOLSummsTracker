@@ -176,15 +176,28 @@ namespace SummsTracker
                 }
             }
 
+            [Serializable]
+            public class Participants
+            {
+                public string id;
+
+                public Participants(string id)
+                {
+                    this.id = id;
+                }
+            }
+
             public string id;
             public string password;
             public Match match;
+            public List<Participants> participants;
 
             public Room(string id, string password)
             {
                 this.id = id;
                 this.password = password;
                 match = new Match();
+                participants = new List<Participants>();
             }
         }
 
@@ -255,7 +268,6 @@ namespace SummsTracker
                     Texture2D texture = DownloadHandlerTexture.GetContent(summonerIconRequest);
                     summonerSpells.Add(json[i]["key"], new GameItem(json[i]["id"], json[i]["name"], json[i]["cooldownBurn"].AsFloat, Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero)));
                 }
-
             }
         }
 
@@ -282,6 +294,7 @@ namespace SummsTracker
                 yield return new WaitUntil(() => getMatchLiveInfoCOCompleted);
                 if (getMatchLiveInfoCOCompletedSuccessfully)
                 {
+                    room.participants.Add(new Room.Participants(FireBaseManager.Instance.auth.CurrentUser.UserId));
                     StartCoroutine(CreateRoomNodeCO());
                     yield return new WaitUntil(() => createRoomNodeCOCompleted);
                     if (createRoomNodeCOCompletedSuccessfully)
@@ -330,6 +343,15 @@ namespace SummsTracker
                     {
                         room = getRoomNodeTask.Result;
                         Debug.Log("#JoinRoomCO# Room info loaded successfully");
+
+                        // Participant added to the room.
+                        room.participants.Add(new Room.Participants(FireBaseManager.Instance.auth.CurrentUser.UserId));
+                        var updateParticipantsNodeTask = UpdateParticipantsNodeTask();
+                        yield return new WaitUntil(() => updateParticipantsNodeTask.IsCompleted);
+                        if (updateParticipantsNodeTask.Result)
+                        {
+                            Debug.Log("#JoinRoomCO# Participant added to the room");
+                        }
                     }
                     else
                     {
@@ -405,6 +427,7 @@ namespace SummsTracker
                 if (request.responseCode == 200)
                 {
                     var json = JSON.Parse(request.downloadHandler.text);
+                    Debug.Log(request.downloadHandler.text);
                     Debug.LogFormat("game id: {0}", json["gameId"]);
                     int enemyTeamId = 0;
                     for (int i = 0; i < json["participants"].Count; i++)

@@ -191,14 +191,14 @@ namespace SummsTracker
         {
             // Firebase.
             var updateSummonerSpellNodeTask = UpdateSummonerSpellNodeTask(enemySummonerId, isSpell2);
-            Debug.Log("Creating table in FireBase");
             yield return new WaitUntil(() => updateSummonerSpellNodeTask.IsCompleted);
         }
 
         async Task<bool> UpdateSummonerSpellNodeTask(int enemySummonerId, bool isSpell2)
         {
             await databaseReference.
-                Child(room.match.matchId).
+                Child(room.id).
+                Child("match").
                 Child("summoners").
                 Child(enemySummonerId.ToString()).
                 SetRawJsonValueAsync(JsonUtility.ToJson(room.match.summoners[enemySummonerId]));
@@ -206,5 +206,14 @@ namespace SummsTracker
             return true;
         }
 
+        async Task<bool> UpdateParticipantsNodeTask()
+        {
+            await databaseReference.
+                Child(room.id).
+                Child("participants").
+                SetRawJsonValueAsync(JsonUtility.ToJson(room.participants));
+            //await UpdateTimestamp(enemySummonerId, isSpell2);
+            return true;
+        }
     }
 }

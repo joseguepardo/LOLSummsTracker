@@ -11,7 +11,7 @@ namespace SummsTracker
 {
     public class FireBaseManager : SRSingleton<FireBaseManager>
     {
-        FirebaseAuth auth;
+        public FirebaseAuth auth;
 
         [BoxGroup("User")]
         public string userId;

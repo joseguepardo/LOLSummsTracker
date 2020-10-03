@@ -177,11 +177,11 @@ namespace SummsTracker
             }
 
             [Serializable]
-            public class Participants
+            public class Participant
             {
                 public string id;
 
-                public Participants(string id)
+                public Participant(string id)
                 {
                     this.id = id;
                 }
@@ -190,14 +190,14 @@ namespace SummsTracker
             public string id;
             public string password;
             public Match match;
-            public List<Participants> participants;
+            public List<Participant> participants;
 
             public Room(string id, string password)
             {
                 this.id = id;
                 this.password = password;
                 match = new Match();
-                participants = new List<Participants>();
+                participants = new List<Participant>();
             }
         }
 
@@ -294,7 +294,7 @@ namespace SummsTracker
                 yield return new WaitUntil(() => getMatchLiveInfoCOCompleted);
                 if (getMatchLiveInfoCOCompletedSuccessfully)
                 {
-                    room.participants.Add(new Room.Participants(FireBaseManager.Instance.auth.CurrentUser.UserId));
+                    room.participants.Add(new Room.Participant(FireBaseManager.Instance.auth.CurrentUser.UserId));
                     StartCoroutine(CreateRoomNodeCO());
                     yield return new WaitUntil(() => createRoomNodeCOCompleted);
                     if (createRoomNodeCOCompletedSuccessfully)
@@ -345,8 +345,7 @@ namespace SummsTracker
                         Debug.Log("#JoinRoomCO# Room info loaded successfully");
 
                         // Participant added to the room.
-                        room.participants.Add(new Room.Participants(FireBaseManager.Instance.auth.CurrentUser.UserId));
-                        var updateParticipantsNodeTask = UpdateParticipantsNodeTask();
+                        var updateParticipantsNodeTask = UpdateParticipantsNodeTask(FireBaseManager.Instance.userId);
                         yield return new WaitUntil(() => updateParticipantsNodeTask.IsCompleted);
                         if (updateParticipantsNodeTask.Result)
                         {

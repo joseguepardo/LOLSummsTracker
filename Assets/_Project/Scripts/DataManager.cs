@@ -10,6 +10,7 @@ using SRF.Components;
 using UnityEditor.UIElements;
 using System.Security.Cryptography.X509Certificates;
 using TMPro;
+using SimpleJSON;
 
 namespace SummsTracker
 {
@@ -81,6 +82,7 @@ namespace SummsTracker
             FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("2").ValueChanged += OnSummonerUpdated_2;
             FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("3").ValueChanged += OnSummonerUpdated_3;
             FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("match").Child("summoners").Child("4").ValueChanged += OnSummonerUpdated_4;
+            FirebaseDatabase.DefaultInstance.GetReference(room.id).Child("participants").ValueChanged += OnParticipantsUpdated;
         }
 
         async Task CreateRoomNodeTask()
@@ -158,6 +160,23 @@ namespace SummsTracker
             Summoner updatedSummoner = JsonUtility.FromJson<Summoner>(args.Snapshot.GetRawJsonValue());
             OnSummonerUpdated(updatedSummoner, 4);
         }
+        void OnParticipantsUpdated(object sender, ValueChangedEventArgs args)
+        {
+            if (args.DatabaseError != null)
+            {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            Debug.Log(args.Snapshot.GetRawJsonValue());
+
+            room.participants.Clear();
+            var json = JSON.Parse(args.Snapshot.GetRawJsonValue());
+            for (int i = 0; i < json.Count; i++)
+            {
+                Room.Participant participant = JsonUtility.FromJson<Room.Participant>(json[i]);
+                room.participants.Add(participant);
+            }
+        }
 
         void OnSummonerUpdated(Summoner updatedSummoner, int id)
         {
@@ -206,14 +225,42 @@ namespace SummsTracker
             return true;
         }
 
-        async Task<bool> UpdateParticipantsNodeTask()
+        async Task<bool> UpdateParticipantsNodeTask(string userId, bool delete = false)
         {
-            await databaseReference.
-                Child(room.id).
-                Child("participants").
-                SetRawJsonValueAsync(JsonUtility.ToJson(room.participants));
-            //await UpdateTimestamp(enemySummonerId, isSpell2);
-            return true;
+            if (delete)
+            {
+                int userListId = 0;
+                for (int i = 0; i < room.participants.Count; i++)
+                {
+                    if (userId == room.participants[i].id)
+                    {
+                        userListId = i;
+                        break;
+                    }
+                    if (i == room.participants.Count - 1)
+                    {
+                        return false;
+                    }
+                }
+                await databaseReference.
+                    Child(room.id).
+                    Child("participants").
+                    Child(userListId.ToString()).
+                    SetRawJsonValueAsync(null);
+                //await UpdateTimestamp(enemySummonerId, isSpell2);
+                return true;
+            }
+            else
+            {
+                room.participants.Add(new Room.Participant(userId));
+                await databaseReference.
+                    Child(room.id).
+                    Child("participants").
+                    Child((room.participants.Count - 1).ToString()).
+                    SetRawJsonValueAsync(JsonUtility.ToJson(room.participants[room.participants.Count - 1]));
+                //await UpdateTimestamp(enemySummonerId, isSpell2);
+                return true;
+            }
         }
     }
 }
